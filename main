@@ -1,0 +1,113 @@
+from tkinter import *
+import tkinter
+from tkinter.scrolledtext import ScrolledText
+from djitellopy import Tello
+
+
+def output(txt):
+    global panel
+    panel.insert(INSERT, '\n'+txt)
+
+coms = ["взлет", "вперед", "назад", "влево", "вправо", "поворот", "вверх", "вниз", "приземление"]
+work = []
+
+def send_command():
+    global command_entry
+    val = command_entry.get().lower().split()
+    output("#"+command_entry.get())
+    if val[0].lower() in coms:
+        output("Команда добавлена")
+        work.append(val)
+    elif val[0] == "запуск":
+        do_comm()
+    else:
+        output("Команда не распознана")
+
+def do_comm():
+    
+    drone = Tello()
+    drone.connect()
+
+    for val in work:
+        try:
+        
+            if val[0] == "взлёт" or val[0] == "взлет":
+                drone.takeoff()
+            elif val[0] == "вперёд" or val[0] == "вперед":
+                if val[1].isnumeric():
+                    drone.move_forward(int(val[1]))
+                else:
+                    output("Ошибка, введите числовое значение для команды"+val[0])
+            elif val[0] == "назад":
+                if val[1].isnumeric():
+                    drone.move_back(int(val[1]))
+                else:
+                    output("Ошибка, введите числовое значение для команды"+val[0])
+            elif val[0] == "налево":
+                if val[1].isnumeric():
+                    drone.move_left(int(val[1]))
+                else:
+                    output("Ошибка, введите числовое значение для команды"+val[0])
+            elif val[0] == "вправо":
+                if val[1].isnumeric():
+                    drone.move_right(int(val[1]))
+                else:
+                    output("Ошибка, введите числовое значение для команды"+val[0])
+            elif val[0] == "вверх":
+                if val[1].isnumeric():
+                    drone.move_up(int(val[1]))
+                else:
+                    output("Ошибка, введите числовое значение для команды"+val[0])
+            elif val[0] == "вниз":
+                if val[1].isnumeric():
+                    drone.move_down(int(val[1]))
+                else:
+                    output("Ошибка, введите числовое значение для команды"+val[0])
+            elif val[0] == "поворот":
+                if val[1].isnumeric():
+                    drone.rotate_clockwise(int(val[1]))
+                else:
+                    output("Ошибка, введите числовое значение для команды"+val[0])
+            elif val[0] == "посадка":
+                drone.land()
+            else:
+                res = "Команда не распознана"
+            output(res)
+        except Exception as e:
+            output("Ошибка. Больше информации в логах")
+            print(e)
+    work.clear()
+
+
+
+
+
+root = Tk("Панель управления")
+root.geometry("500x500")
+root.title("Управление дроном")
+frame = Frame(root)
+frame.columnconfigure(tuple(range(6)), weight=1)
+frame.rowconfigure(tuple(range(6)), weight=1)
+frame.pack()
+
+panel = ScrolledText(frame, height = 10)
+panel.grid(row=0, column=0, 
+columnspan=4, rowspan=3, padx = (5,5), pady = (5,5), sticky= "news")
+panel['font'] = ("Times new roman", 16)
+panel.tag_configure("text_align", justify='left')
+
+
+command = tkinter.StringVar()
+command_entry = Entry(frame, textvariable = command)
+command_entry.grid(row=4, column=0, 
+columnspan=3, padx = (5,5), pady = (5,5), sticky="news")
+command_entry["text"] = ""
+
+go_btn = Button(frame)
+go_btn.grid(row=4, column=3, 
+columnspan=1, padx = (5,5), pady = (5,5), sticky="news")
+go_btn['text'] = "Отправить команду"
+go_btn['command'] = send_command
+
+root.mainloop()
+
