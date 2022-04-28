@@ -1,113 +1,89 @@
-from tkinter import *
-import tkinter
-from tkinter.scrolledtext import ScrolledText
+import torch
+from torchvision import transforms, datasets
+import torch.nn as nn
+import numpy as np
+import cv2
+import torch.nn.functional as F
+
+train = datasets.MNIST('', train=True, download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor()
+                       ]))
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
+train.train_data.to(device)  #train_dataset.train_data is a Tensor(input data)
+train.train_labels.to(device)
+
+trainset = torch.utils.data.DataLoader(train, batch_size=10, shuffle=True)
+
+class Net(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(28*28, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, 64)
+        self.fc4 = nn.Linear(64, 10)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = self.fc4(x)
+        return F.log_softmax(x, dim=1)
+
+net = Net()
+net.to(device)
+print(net)
+import torch.optim as optim
+
+loss_function = nn.CrossEntropyLoss()
+optimizer = optim.Adam(net.parameters(), lr=0.001)
+for epoch in range(3): # 3 full passes over the data
+    for data in trainset:  # `data` is a batch of data
+        X, y = data  # X is the batch of features, y is the batch of targets.
+        net.zero_grad()  # sets gradients to 0 before loss calc. You will do this likely every step.
+        X = X.to(device)
+        y = y.to(device)
+        output = net(X.view(-1,784))  # pass in the reshaped batch (recall they are 28x28 atm)
+        loss = F.nll_loss(output, y)  # calc and grab the loss value
+        loss.backward()  # apply this loss backwards thru the network's parameters
+        optimizer.step()  # attempt to optimize weights to account for loss/gradients
+    print(loss)  # print loss. We hope loss (a measure of wrong-ness) declines! 
+
 from djitellopy import Tello
 
+# Список картинок 
 
-def output(txt):
-    global panel
-    panel.insert(INSERT, '\n'+txt)
+imgs = ["q.jfif"]
+# Подключение
+drone = Tello()
+drone.connect()
+#Взлёт
+drone.takeoff()
 
-coms = ["взлет", "вперед", "назад", "влево", "вправо", "поворот", "вверх", "вниз", "приземление"]
-work = []
+for img in imgs:
 
-def send_command():
-    global command_entry
-    val = command_entry.get().lower().split()
-    output("#"+command_entry.get())
-    if val[0].lower() in coms:
-        output("Команда добавлена")
-        work.append(val)
-    elif val[0] == "запуск":
-        do_comm()
-    else:
-        output("Команда не распознана")
+    gray = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
 
-def do_comm():
-    
-    drone = Tello()
-    drone.connect()
+    with torch.no_grad():
 
-    for val in work:
-        try:
-        
-            if val[0] == "взлёт" or val[0] == "взлет":
-                drone.takeoff()
-            elif val[0] == "вперёд" or val[0] == "вперед":
-                if val[1].isnumeric():
-                    drone.move_forward(int(val[1]))
-                else:
-                    output("Ошибка, введите числовое значение для команды"+val[0])
-            elif val[0] == "назад":
-                if val[1].isnumeric():
-                    drone.move_back(int(val[1]))
-                else:
-                    output("Ошибка, введите числовое значение для команды"+val[0])
-            elif val[0] == "налево":
-                if val[1].isnumeric():
-                    drone.move_left(int(val[1]))
-                else:
-                    output("Ошибка, введите числовое значение для команды"+val[0])
-            elif val[0] == "вправо":
-                if val[1].isnumeric():
-                    drone.move_right(int(val[1]))
-                else:
-                    output("Ошибка, введите числовое значение для команды"+val[0])
-            elif val[0] == "вверх":
-                if val[1].isnumeric():
-                    drone.move_up(int(val[1]))
-                else:
-                    output("Ошибка, введите числовое значение для команды"+val[0])
-            elif val[0] == "вниз":
-                if val[1].isnumeric():
-                    drone.move_down(int(val[1]))
-                else:
-                    output("Ошибка, введите числовое значение для команды"+val[0])
-            elif val[0] == "поворот":
-                if val[1].isnumeric():
-                    drone.rotate_clockwise(int(val[1]))
-                else:
-                    output("Ошибка, введите числовое значение для команды"+val[0])
-            elif val[0] == "посадка":
-                drone.land()
-            else:
-                res = "Команда не распознана"
-            output(res)
-        except Exception as e:
-            output("Ошибка. Больше информации в логах")
-            print(e)
-    work.clear()
+        output = net(torch.Tensor(np.array(cv2.resize(gray, (28, 28)))).to(device).view(-1,784))
+        res = (torch.argmax(output))
+        print(res.item())
 
+        if res.item() == n:
+            pass
+        if res.item() == n:
+            pass
+        if res.item() == n:
+            pass
+        if res.item() == n:
+            pass
 
+# Приземление
+drone.land()
 
-
-
-root = Tk("Панель управления")
-root.geometry("500x500")
-root.title("Управление дроном")
-frame = Frame(root)
-frame.columnconfigure(tuple(range(6)), weight=1)
-frame.rowconfigure(tuple(range(6)), weight=1)
-frame.pack()
-
-panel = ScrolledText(frame, height = 10)
-panel.grid(row=0, column=0, 
-columnspan=4, rowspan=3, padx = (5,5), pady = (5,5), sticky= "news")
-panel['font'] = ("Times new roman", 16)
-panel.tag_configure("text_align", justify='left')
-
-
-command = tkinter.StringVar()
-command_entry = Entry(frame, textvariable = command)
-command_entry.grid(row=4, column=0, 
-columnspan=3, padx = (5,5), pady = (5,5), sticky="news")
-command_entry["text"] = ""
-
-go_btn = Button(frame)
-go_btn.grid(row=4, column=3, 
-columnspan=1, padx = (5,5), pady = (5,5), sticky="news")
-go_btn['text'] = "Отправить команду"
-go_btn['command'] = send_command
-
-root.mainloop()
+# When everything done, release the capture
+cv2.destroyAllWindows()
 
